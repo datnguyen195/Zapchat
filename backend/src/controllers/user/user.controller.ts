@@ -5,8 +5,10 @@ import { Request, Response } from 'express';
 import { User } from '../../models';
 import { sendResponse } from '../../ultils/apiResponse';
 
+import { CreateUserInput } from './type';
+
 export const createUser = expressAsyncHandler(
-  async (req: Request, res: Response) => {
+  async (req: Request<CreateUserInput>, res: Response) => {
     const user = req.body.params ?? req.body;
 
     const existingUser = await User.findOne({ email: user.email });
