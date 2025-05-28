@@ -4,6 +4,7 @@ import { User } from '../../models';
 import { sendResponse } from '../../ultils/apiResponse';
 import { CreateUserInput, LoginUserInput } from './type';
 import bcrypt from 'bcrypt';
+import { generateToken } from '../../ultils/jwt';
 
 export const createUser = expressAsyncHandler(
   async (req: Request, res: Response) => {
@@ -49,9 +50,14 @@ export const loginUser = expressAsyncHandler(
       return;
     }
 
+    const token = generateToken({
+      userId: user._id,
+      email: user.email,
+    });
+
     sendResponse(res, 200, true, 'Đăng nhập thành công', {
       user,
-      // token,
+      token,
     });
     return;
   },
