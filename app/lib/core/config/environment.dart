@@ -27,14 +27,6 @@ class Environment {
   static String? get firebaseApiKey => dotenv.env['FIREBASE_API_KEY'];
   static String? get googleClientId => dotenv.env['GOOGLE_CLIENT_ID'];
 
-  // Database (nếu cần)
-  static String get dbHost => dotenv.env['DB_HOST'] ?? 'localhost';
-  static int get dbPort =>
-      int.tryParse(dotenv.env['DB_PORT'] ?? '5432') ?? 5432;
-  static String get dbName => dotenv.env['DB_NAME'] ?? 'zapchat_db';
-  static String get dbUser => dotenv.env['DB_USER'] ?? 'postgres';
-  static String? get dbPassword => dotenv.env['DB_PASSWORD'];
-
   // Utility methods
   static void printConfig() {
     if (isDebugMode) {
