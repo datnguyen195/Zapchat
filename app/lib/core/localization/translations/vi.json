@@ -1,0 +1,74 @@
+{
+  "app": {
+    "name": "ZapChat",
+    "welcome": "Chào mừng đến với ZapChat",
+    "loading": "Đang tải...",
+    "error": "Đã xảy ra lỗi",
+    "retry": "Thử lại",
+    "cancel": "Hủy",
+    "confirm": "Xác nhận",
+    "save": "Lưu",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "refresh": "Làm mới"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "register": "Đăng ký",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
+    "loginSuccess": "Đăng nhập thành công",
+    "loginFailed": "Đăng nhập thất bại",
+    "invalidEmail": "Email không hợp lệ",
+    "passwordTooShort": "Mật khẩu quá ngắn"
+  },
+  "user": {
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt",
+    "name": "Tên",
+    "phone": "Số điện thoại",
+    "avatar": "Ảnh đại diện",
+    "updateProfile": "Cập nhật hồ sơ",
+    "profileUpdated": "Cập nhật hồ sơ thành công"
+  },
+  "weather": {
+    "title": "Thời tiết",
+    "enterCity": "Nhập tên thành phố",
+    "getWeather": "Xem thời tiết",
+    "forecast": "Dự báo",
+    "temperature": "Nhiệt độ",
+    "humidity": "Độ ẩm",
+    "windSpeed": "Tốc độ gió",
+    "cityNotFound": "Không tìm thấy thành phố",
+    "weatherError": "Không thể lấy dữ liệu thời tiết"
+  },
+  "chat": {
+    "messages": "Tin nhắn",
+    "typeMessage": "Nhập tin nhắn...",
+    "send": "Gửi",
+    "online": "Trực tuyến",
+    "offline": "Ngoại tuyến",
+    "typing": "đang gõ...",
+    "messageDeleted": "Tin nhắn đã xóa",
+    "messageSent": "Tin nhắn đã gửi"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "language": "Ngôn ngữ",
+    "theme": "Giao diện",
+    "notifications": "Thông báo",
+    "privacy": "Riêng tư",
+    "about": "Giới thiệu",
+    "version": "Phiên bản",
+    "logoutConfirm": "Bạn có chắc muốn đăng xuất?"
+  },
+  "errors": {
+    "networkError": "Lỗi kết nối mạng",
+    "serverError": "Lỗi máy chủ, vui lòng thử lại",
+    "timeoutError": "Hết thời gian chờ",
+    "unknownError": "Đã xảy ra lỗi không xác định"
+  }
+}

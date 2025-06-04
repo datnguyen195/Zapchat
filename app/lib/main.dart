@@ -1,50 +1,76 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'routes/app_router.dart';
-import 'core/themes/app_theme.dart';
-import 'core/services/service_locator.dart';
-import 'core/config/environment.dart';
+import 'core/app/app_initializer.dart';
+import 'core/app/zapchat_app.dart';
+import 'core/app/splash_screen.dart';
 import 'core/utils/app_logger.dart';
 
 Future<void> main() async {
-  // Đảm bảo Flutter bindings được khởi tạo
-  WidgetsFlutterBinding.ensureInitialized();
+  // Show splash screen while initializing
+  runApp(const SplashScreen(message: 'Initializing ZapChat...'));
 
-  // Load environment variables
-  await dotenv.load(fileName: ".env");
+  try {
+    // Initialize app with all required services
+    await AppInitializer.initialize();
 
-  // Khởi tạo Logger
-  AppLogger.init();
-
-  // Validate required environment variables
-  if (!Environment.validateRequired()) {
-    AppLogger.fatal('Missing required environment variables');
-    throw Exception('Missing required environment variables');
+    // Run the main app
+    runApp(const ZapChatApp());
+  } catch (e) {
+    // Show error screen if initialization fails
+    AppLogger.fatal('Failed to start ZapChat', e);
+    runApp(_buildErrorApp(e.toString()));
   }
-
-  // Print config in debug mode
-  Environment.printConfig();
-
-  // Khởi tạo ServiceLocator sau khi load env
-  ServiceLocator.setup();
-
-  AppLogger.info('🚀 ZapChat App Started');
-
-  runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'ZapChat',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      routerConfig: appRouter,
-    );
-  }
+// Build error app if initialization fails
+Widget _buildErrorApp(String error) {
+  return MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: Scaffold(
+      backgroundColor: Colors.red.shade50,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red.shade600),
+              const SizedBox(height: 24),
+              const Text(
+                'Khởi động ứng dụng thất bại',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Chi tiết lỗi:\n$error',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () {
+                  // Restart app
+                  main();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Thử lại'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }

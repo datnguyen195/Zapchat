@@ -27,6 +27,11 @@ class Environment {
   static String? get firebaseApiKey => dotenv.env['FIREBASE_API_KEY'];
   static String? get googleClientId => dotenv.env['GOOGLE_CLIENT_ID'];
 
+  // Google Sheets Translation Management
+  static String get googleSheetsId =>
+      dotenv.env['GOOGLE_SHEETS_ID'] ?? 'YOUR_SHEET_ID_HERE';
+  static String get googleSheetsGid => dotenv.env['GOOGLE_SHEETS_GID'] ?? '0';
+
   // Utility methods
   static void printConfig() {
     if (isDebugMode) {

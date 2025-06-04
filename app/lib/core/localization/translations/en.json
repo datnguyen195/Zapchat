@@ -1,0 +1,74 @@
+{
+  "app": {
+    "name": "ZapChat",
+    "welcome": "Welcome to ZapChat",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try Again",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "refresh": "Refresh"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "loginSuccess": "Login successful",
+    "loginFailed": "Login failed",
+    "invalidEmail": "Invalid email address",
+    "passwordTooShort": "Password too short"
+  },
+  "user": {
+    "profile": "Profile",
+    "settings": "Settings",
+    "name": "Name",
+    "phone": "Phone Number",
+    "avatar": "Avatar",
+    "updateProfile": "Update Profile",
+    "profileUpdated": "Profile updated successfully"
+  },
+  "weather": {
+    "title": "Weather",
+    "enterCity": "Enter city name",
+    "getWeather": "Get Weather",
+    "forecast": "Forecast",
+    "temperature": "Temperature",
+    "humidity": "Humidity",
+    "windSpeed": "Wind Speed",
+    "cityNotFound": "City not found",
+    "weatherError": "Failed to get weather data"
+  },
+  "chat": {
+    "messages": "Messages",
+    "typeMessage": "Type a message...",
+    "send": "Send",
+    "online": "Online",
+    "offline": "Offline",
+    "typing": "typing...",
+    "messageDeleted": "Message deleted",
+    "messageSent": "Message sent"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "about": "About",
+    "version": "Version",
+    "logoutConfirm": "Are you sure you want to logout?"
+  },
+  "errors": {
+    "networkError": "Network connection error",
+    "serverError": "Server error, please try again",
+    "timeoutError": "Request timeout",
+    "unknownError": "Unknown error occurred"
+  }
+}
