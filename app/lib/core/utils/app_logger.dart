@@ -13,6 +13,22 @@ class AppLogger {
     );
   }
 
+  // Safe init for early initialization (before Environment is loaded)
+  static void initBasic() {
+    _logger = Logger(
+      level: Level.debug, // Default to debug
+      printer: PrettyPrinter(
+        methodCount: 2,
+        errorMethodCount: 8,
+        lineLength: 120,
+        colors: true,
+        printEmojis: true,
+        printTime: true,
+      ),
+      output: ConsoleOutput(),
+    );
+  }
+
   // Lấy log level dựa trên environment
   static Level _getLogLevel() {
     if (Environment.isProduction) {

@@ -32,6 +32,9 @@ class AppInitializer {
       // Ensure Flutter bindings
       WidgetsFlutterBinding.ensureInitialized();
 
+      // Initialize Logger FIRST (basic mode before Environment loaded)
+      AppLogger.initBasic();
+
       AppLogger.info('🚀 Starting ZapChat App Initialization...');
 
       // Initialize error handling first
@@ -75,8 +78,9 @@ class AppInitializer {
   static Future<void> _initializeCoreServices() async {
     AppLogger.debug('🔧 Initializing core services...');
 
-    // Initialize Logger
+    // Re-init Logger with Environment configuration
     AppLogger.init();
+    AppLogger.debug('🔄 Logger re-initialized with Environment config');
 
     // Setup Dependency Injection
     ServiceLocator.setup();
@@ -88,9 +92,24 @@ class AppInitializer {
   static Future<void> _initializeFeatureServices() async {
     AppLogger.debug('📱 Initializing feature services...');
 
-    // Initialize Language Manager
+    // Initialize Language Manager with timeout
+    AppLogger.debug('🌐 Starting Language Manager initialization...');
     _languageManager = LanguageManager();
-    await _languageManager!.initialize();
+
+    try {
+      await _languageManager!.initialize().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          AppLogger.warning(
+            '⚠️ Language Manager initialization timeout, using defaults',
+          );
+        },
+      );
+      AppLogger.debug('✅ Language Manager initialized successfully');
+    } catch (e) {
+      AppLogger.error('❌ Language Manager initialization failed', e);
+      // Continue with defaults
+    }
 
     AppLogger.info('✅ Feature services initialized');
   }
@@ -111,6 +130,7 @@ class AppInitializer {
   // Background translation sync
   static void _syncTranslationsInBackground() {
     TranslationSyncService.syncTranslations()
+        .timeout(const Duration(seconds: 30))
         .then((success) {
           if (success) {
             AppLogger.info('✅ Background translation sync completed');

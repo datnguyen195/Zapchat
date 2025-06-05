@@ -154,7 +154,7 @@ class _TranslationManagementPageState extends State<TranslationManagementPage> {
             ),
             const SizedBox(height: 8),
             Text('Sheet ID: ${Environment.googleSheetsId}'),
-            Text('GID: ${Environment.googleSheetsGid}'),
+            // Text('GID: ${Environment.googleSheetsGid}'),
             Text('Environment: ${Environment.environment}'),
             const SizedBox(height: 8),
             const Text(

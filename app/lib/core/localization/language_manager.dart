@@ -28,7 +28,14 @@ class LanguageManager extends ChangeNotifier {
   // Initialize language from stored preference
   Future<void> initialize() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      // Add timeout for SharedPreferences to prevent hanging
+      final prefs = await SharedPreferences.getInstance().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw Exception('SharedPreferences timeout');
+        },
+      );
+
       final savedLanguage = prefs.getString(_languageKey);
 
       if (savedLanguage != null) {
@@ -36,20 +43,27 @@ class LanguageManager extends ChangeNotifier {
         if (_isSupportedLocale(locale)) {
           _currentLocale = locale;
           notifyListeners();
+          return;
         }
-      } else {
-        // Use system locale if supported, otherwise default to English
-        final systemLocale = _getSystemLocale();
-        _currentLocale =
-            _isSupportedLocale(systemLocale)
-                ? systemLocale
-                : const Locale('en', '');
-        await _saveLanguage(_currentLocale.languageCode);
-        notifyListeners();
       }
+
+      // Use system locale if supported, otherwise default to English
+      final systemLocale = _getSystemLocale();
+      _currentLocale =
+          _isSupportedLocale(systemLocale)
+              ? systemLocale
+              : const Locale('en', '');
+
+      // Try to save language preference (non-blocking)
+      _saveLanguage(_currentLocale.languageCode).catchError((e) {
+        // Ignore save errors during initialization
+      });
+
+      notifyListeners();
     } catch (e) {
-      // Default to English if error
+      // Default to English if any error occurs
       _currentLocale = const Locale('en', '');
+      notifyListeners();
     }
   }
 

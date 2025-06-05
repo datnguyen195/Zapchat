@@ -1,24 +1,23 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:csv/csv.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import '../utils/app_logger.dart';
 import '../config/environment.dart';
 
 class TranslationSyncService {
-  // Google Sheets CSV export URL format
-  // https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}
+  // Google Sheets API v4 URL format
+  // https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/{SHEET_NAME}?key={API_KEY}
   static String get _sheetId => Environment.googleSheetsId;
-  static String get _gid => Environment.googleSheetsGid;
+  static String get _apiKey => Environment.googleSheetsApiKey;
+  static String get _sheetName => Environment.googleSheetsName;
 
-  static const String _cacheKeyPrefix = 'translations_cache_';
-  static const String _lastSyncKey = 'last_translation_sync';
-  static const Duration _cacheDuration = Duration(hours: 6); // Cache 6 hours
+  static const Duration _syncCooldown = Duration(hours: 6); // Sync cooldown
 
   // Sync translations từ Google Sheets
   static Future<bool> syncTranslations() async {
     try {
-      AppLogger.info('🔄 Starting translation sync from Google Sheets');
+      AppLogger.info('🔄 Starting translation sync from Google Sheets API');
 
       // Check if need to sync (avoid too frequent requests)
       if (!await _shouldSync()) {
@@ -26,27 +25,28 @@ class TranslationSyncService {
         return true;
       }
 
-      final csvUrl =
-          'https://docs.google.com/spreadsheets/d/$_sheetId/export?format=csv&gid=$_gid';
+      final apiUrl =
+          'https://sheets.googleapis.com/v4/spreadsheets/$_sheetId/values/$_sheetName?key=$_apiKey';
 
-      // Fetch CSV data
+      // Fetch JSON data from Google Sheets API
       final response = await http
-          .get(Uri.parse(csvUrl), headers: {'Accept': 'text/csv'})
+          .get(Uri.parse(apiUrl), headers: {'Accept': 'application/json'})
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode != 200) {
         throw Exception('Failed to fetch translations: ${response.statusCode}');
       }
 
-      // Parse CSV
-      final csvData = const CsvToListConverter().convert(response.body);
+      // Parse JSON response
+      final jsonData = json.decode(response.body) as Map<String, dynamic>;
+      final values = jsonData['values'] as List<dynamic>?;
 
-      if (csvData.isEmpty) {
-        throw Exception('Empty CSV data received');
+      if (values == null || values.isEmpty) {
+        throw Exception('Empty data received from Google Sheets');
       }
 
       // Process and cache translations
-      await _processCsvData(csvData);
+      await _processSheetData(values);
       await _updateLastSyncTime();
 
       AppLogger.info('✅ Translation sync completed successfully');
@@ -57,16 +57,16 @@ class TranslationSyncService {
     }
   }
 
-  // Process CSV data and cache by language
-  static Future<void> _processCsvData(List<List<dynamic>> csvData) async {
-    if (csvData.length < 2) return;
+  // Process Google Sheets API data and cache by language
+  static Future<void> _processSheetData(List<dynamic> sheetData) async {
+    if (sheetData.length < 2) return;
 
     // First row is headers: [key, en, vi, ja, ...]
-    final headers = csvData[0].cast<String>();
+    final headers = (sheetData[0] as List<dynamic>).cast<String>();
     final keyIndex = headers.indexOf('key');
 
     if (keyIndex == -1) {
-      throw Exception('Key column not found in CSV');
+      throw Exception('Key column not found in sheet data');
     }
 
     // Initialize translation maps for each language
@@ -80,8 +80,8 @@ class TranslationSyncService {
     }
 
     // Process each row (skip header)
-    for (int i = 1; i < csvData.length; i++) {
-      final row = csvData[i];
+    for (int i = 1; i < sheetData.length; i++) {
+      final row = sheetData[i] as List<dynamic>;
       if (row.length <= keyIndex) continue;
 
       final key = row[keyIndex].toString().trim();
@@ -99,9 +99,9 @@ class TranslationSyncService {
       }
     }
 
-    // Cache translations for each language
+    // Save translations to JSON files
     for (final langCode in languageCodes) {
-      await _cacheTranslations(langCode, translations[langCode]!);
+      await _saveToJsonFile(langCode, translations[langCode]!);
     }
   }
 
@@ -122,88 +122,140 @@ class TranslationSyncService {
     current[parts.last] = value;
   }
 
-  // Cache translations for a language
-  static Future<void> _cacheTranslations(
+  // Save translations to JSON file in translations folder
+  static Future<void> _saveToJsonFile(
     String languageCode,
     Map<String, dynamic> translations,
   ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final cacheKey = '$_cacheKeyPrefix$languageCode';
-      await prefs.setString(cacheKey, json.encode(translations));
+      final directory = await getApplicationDocumentsDirectory();
+      final translationsDir = Directory('${directory.path}/translations');
 
-      AppLogger.debug('💾 Cached translations for $languageCode');
+      // Create translations directory if it doesn't exist
+      if (!await translationsDir.exists()) {
+        await translationsDir.create(recursive: true);
+      }
+
+      final file = File('${translationsDir.path}/$languageCode.json');
+      final jsonString = const JsonEncoder.withIndent(
+        '  ',
+      ).convert(translations);
+
+      await file.writeAsString(jsonString);
+
+      AppLogger.debug('📄 Saved translations to file: ${file.path}');
     } catch (e) {
-      AppLogger.error('Failed to cache translations for $languageCode', e);
+      AppLogger.error(
+        'Failed to save translations to file for $languageCode',
+        e,
+      );
     }
   }
 
-  // Get cached translations for a language
+  // Get saved translations for a language
   static Future<Map<String, dynamic>?> getCachedTranslations(
     String languageCode,
   ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final cacheKey = '$_cacheKeyPrefix$languageCode';
-      final cachedJson = prefs.getString(cacheKey);
-
-      if (cachedJson != null) {
-        return json.decode(cachedJson) as Map<String, dynamic>;
-      }
+      // Load from saved JSON file
+      return await _loadFromSavedFile(languageCode);
     } catch (e) {
-      AppLogger.error('Failed to get cached translations for $languageCode', e);
+      AppLogger.error('Failed to get saved translations for $languageCode', e);
     }
     return null;
   }
 
-  // Check if should sync (based on cache age)
+  // Load translations from saved JSON file
+  static Future<Map<String, dynamic>?> _loadFromSavedFile(
+    String languageCode,
+  ) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/translations/$languageCode.json');
+
+      if (await file.exists()) {
+        final jsonString = await file.readAsString();
+        final translations = json.decode(jsonString) as Map<String, dynamic>;
+
+        AppLogger.debug('📄 Loaded translations from file: ${file.path}');
+        return translations;
+      }
+    } catch (e) {
+      AppLogger.error(
+        'Failed to load translations from file for $languageCode',
+        e,
+      );
+    }
+    return null;
+  }
+
+  // Check if should sync (based on file modification time)
   static Future<bool> _shouldSync() async {
     if (!Environment.isDebugMode) {
-      // In production, check cache age
+      // In production, check file age
       try {
-        final prefs = await SharedPreferences.getInstance();
-        final lastSync = prefs.getInt(_lastSyncKey);
+        final directory = await getApplicationDocumentsDirectory();
+        final lastSyncFile = File('${directory.path}/translations/.last_sync');
 
-        if (lastSync != null) {
-          final lastSyncTime = DateTime.fromMillisecondsSinceEpoch(lastSync);
+        if (await lastSyncFile.exists()) {
+          final lastSyncTime = DateTime.fromMillisecondsSinceEpoch(
+            int.parse(await lastSyncFile.readAsString()),
+          );
           final timeSinceSync = DateTime.now().difference(lastSyncTime);
 
-          return timeSinceSync > _cacheDuration;
+          return timeSinceSync > _syncCooldown;
         }
       } catch (e) {
         AppLogger.error('Error checking sync status', e);
       }
     }
 
-    return true; // Always sync in debug mode or if no cache
+    return true; // Always sync in debug mode or if no sync record
   }
 
   // Update last sync time
   static Future<void> _updateLastSyncTime() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_lastSyncKey, DateTime.now().millisecondsSinceEpoch);
+      final directory = await getApplicationDocumentsDirectory();
+      final translationsDir = Directory('${directory.path}/translations');
+
+      if (!await translationsDir.exists()) {
+        await translationsDir.create(recursive: true);
+      }
+
+      final lastSyncFile = File('${translationsDir.path}/.last_sync');
+      await lastSyncFile.writeAsString(
+        DateTime.now().millisecondsSinceEpoch.toString(),
+      );
     } catch (e) {
       AppLogger.error('Failed to update last sync time', e);
     }
   }
 
-  // Clear cache (for testing)
+  // Clear saved translations (for testing)
   static Future<void> clearCache() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final keys = prefs.getKeys().where(
-        (key) => key.startsWith(_cacheKeyPrefix),
-      );
+      // Clear saved JSON files
+      await _clearSavedFiles();
 
-      for (final key in keys) {
-        await prefs.remove(key);
-      }
-
-      await prefs.remove(_lastSyncKey);
-      AppLogger.info('🗑️ Translation cache cleared');
+      AppLogger.info('🗑️ Translation files cleared');
     } catch (e) {
-      AppLogger.error('Failed to clear translation cache', e);
+      AppLogger.error('Failed to clear translation files', e);
+    }
+  }
+
+  // Clear saved translation files
+  static Future<void> _clearSavedFiles() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final translationsDir = Directory('${directory.path}/translations');
+
+      if (await translationsDir.exists()) {
+        await translationsDir.delete(recursive: true);
+        AppLogger.debug('📁 Deleted translations directory');
+      }
+    } catch (e) {
+      AppLogger.error('Failed to clear saved translation files', e);
     }
   }
 
@@ -213,15 +265,27 @@ class TranslationSyncService {
     return await syncTranslations();
   }
 
-  // Get available languages from cache
+  // Get available languages from saved files
   static Future<List<String>> getAvailableLanguages() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final keys = prefs.getKeys().where(
-        (key) => key.startsWith(_cacheKeyPrefix),
-      );
+      final directory = await getApplicationDocumentsDirectory();
+      final translationsDir = Directory('${directory.path}/translations');
 
-      return keys.map((key) => key.replaceFirst(_cacheKeyPrefix, '')).toList();
+      if (await translationsDir.exists()) {
+        final files = await translationsDir.list().toList();
+        final languageCodes =
+            files
+                .whereType<File>()
+                .where((file) => file.path.endsWith('.json'))
+                .map(
+                  (file) => file.path.split('/').last.replaceAll('.json', ''),
+                )
+                .toList();
+
+        return languageCodes.isNotEmpty ? languageCodes : ['en', 'vi'];
+      }
+
+      return ['en', 'vi']; // Default languages
     } catch (e) {
       AppLogger.error('Failed to get available languages', e);
       return ['en', 'vi']; // Default languages

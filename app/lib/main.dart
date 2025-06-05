@@ -6,11 +6,16 @@ import 'core/utils/app_logger.dart';
 
 Future<void> main() async {
   // Show splash screen while initializing
-  runApp(const SplashScreen(message: 'Initializing ZapChat...'));
+  runApp(const SplashScreen(message: 'Khởi tạo ZapChat...'));
 
   try {
-    // Initialize app with all required services
-    await AppInitializer.initialize();
+    // Initialize app with timeout to prevent indefinite hang
+    await AppInitializer.initialize().timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        throw Exception('App initialization timeout after 30 seconds');
+      },
+    );
 
     // Run the main app
     runApp(const ZapChatApp());

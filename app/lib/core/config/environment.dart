@@ -30,7 +30,10 @@ class Environment {
   // Google Sheets Translation Management
   static String get googleSheetsId =>
       dotenv.env['GOOGLE_SHEETS_ID'] ?? 'YOUR_SHEET_ID_HERE';
-  static String get googleSheetsGid => dotenv.env['GOOGLE_SHEETS_GID'] ?? '0';
+  static String get googleSheetsApiKey =>
+      dotenv.env['GOOGLE_SHEETS_API_KEY'] ?? 'YOUR_API_KEY_HERE';
+  static String get googleSheetsName =>
+      dotenv.env['GOOGLE_SHEETS_NAME'] ?? 'Sheet1';
 
   // Utility methods
   static void printConfig() {
